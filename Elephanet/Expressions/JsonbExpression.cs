@@ -5,16 +5,10 @@ using System.Linq.Expressions;
 
 namespace Elephanet.Expressions
 {
-
-   
-
     public class JsonbExpression  : Expression
     {
-        Expression _jsonbTable;
-        List<Expression> _jsonbPaths;
-        
-        public JsonbExpression(ExpressionType expressionType, Type type)
-            : base((ExpressionType)expressionType, type)
+        public JsonbExpression()
+            : base()
         {
 
         }
@@ -23,12 +17,9 @@ namespace Elephanet.Expressions
     public class JsonbTableExpression: JsonbExpression
     {
         private string _name;
-        public JsonbTableExpression(Type type)
-            : base((ExpressionType)JsonbExpressionType.JsonbTable, type)
+        public JsonbTableExpression()
         {
-            _name = string.Format("{0}_{1}", type.Namespace, type.Name);
+            _name = string.Format("{0}_{1}", Type.Namespace, Type.Name);
         }
-
-        public string Name { get { return _name; } }
     }
 }
