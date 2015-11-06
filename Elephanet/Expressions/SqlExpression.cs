@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using Npgsql;
+﻿using System.Linq.Expressions;
 
 namespace Elephanet.Expressions
 {
     public class SqlExpression : Expression
     {
-        private Sql _query;
+        readonly Sql _query;
  
-        public SqlExpression(Sql query) : base() {
+        public SqlExpression(Sql query) {
             _query = query; 
         }
 

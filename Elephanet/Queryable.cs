@@ -18,12 +18,12 @@ namespace Elephanet
 
    public class JsonbQueryable<T> : IJsonbQueryable<T>  
    {
-        IJsonbQueryProvider _provider;
-        Expression _expression;
+        readonly IJsonbQueryProvider _provider;
+        readonly Expression _expression;
  
         public JsonbQueryable(IJsonbQueryProvider provider) {
             if (provider == null) {
-                throw new ArgumentNullException("provider");
+                throw new ArgumentNullException(nameof(provider));
             }
             _provider = provider;
             _expression = Expression.Constant(this);
@@ -31,13 +31,13 @@ namespace Elephanet
  
         public JsonbQueryable(IJsonbQueryProvider provider, Expression expression) {
             if (provider == null) {
-                throw new ArgumentNullException("provider");
+                throw new ArgumentNullException(nameof(provider));
             }
             if (expression == null) {
-                throw new ArgumentNullException("expression");
+                throw new ArgumentNullException(nameof(expression));
             }
             if (!typeof(IQueryable<T>).IsAssignableFrom(expression.Type)) {
-                throw new ArgumentOutOfRangeException("expression");
+                throw new ArgumentOutOfRangeException(nameof(expression));
             }
             _provider = provider;
             _expression = expression;

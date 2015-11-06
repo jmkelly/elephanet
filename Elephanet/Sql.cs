@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Npgsql;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Threading;
@@ -12,7 +10,7 @@ namespace Elephanet
 
     public class Sql<T>
     {
-        private NpgsqlCommand _command;
+        readonly NpgsqlCommand _command;
         public Sql(string query, object[] parameters)
         {
             _command = new NpgsqlCommand();
@@ -25,20 +23,20 @@ namespace Elephanet
             }
         }
 
-        private string ConvertKeyValueToJson(KeyValuePair<string, object> entry)
+        string ConvertKeyValueToJson(KeyValuePair<string, object> entry)
         {
             CultureInfo cultureInfo = Thread.CurrentThread.CurrentCulture;
             TextInfo textInfo = cultureInfo.TextInfo;
-            return  string.Format("{{\"{0}\":\"{1}\"}}", textInfo.ToTitleCase(entry.Key.Substring(1)), entry.Value);
+            return string.Format("{{\"{0}\":\"{1}\"}}", textInfo.ToTitleCase(entry.Key.Substring(1)), entry.Value);
         }
 
-        private Dictionary<string, object> MatchParameters(string query, object[] parameters)
+        Dictionary<string, object> MatchParameters(string query, object[] parameters)
         {
             var matches = new Dictionary<string, object>();
             int counter = 0;
-            foreach (Match match in Regex.Matches(query,(@"(?<!\w):\w+")))
+            foreach (Match match in Regex.Matches(query, (@"(?<!\w):\w+")))
             {
-                matches.Add(match.Value,parameters[counter]);
+                matches.Add(match.Value, parameters[counter]);
                 counter = counter + 1;
 
             }
@@ -51,7 +49,7 @@ namespace Elephanet
 
     public class Sql
     {
-        private NpgsqlCommand _command;
+        readonly NpgsqlCommand _command;
         public Sql(string query, object[] parameters)
         {
             _command = new NpgsqlCommand();
@@ -63,13 +61,13 @@ namespace Elephanet
             }
         }
 
-        private Dictionary<string, object> MatchParameters(string query, object[] parameters)
+        Dictionary<string, object> MatchParameters(string query, object[] parameters)
         {
             var matches = new Dictionary<string, object>();
             int counter = 0;
-            foreach (Match match in Regex.Matches(query,(@"(?<!\w):\w+")))
+            foreach (Match match in Regex.Matches(query, (@"(?<!\w):\w+")))
             {
-                matches.Add(match.Value,parameters[counter]);
+                matches.Add(match.Value, parameters[counter]);
                 counter = counter + 1;
 
             }

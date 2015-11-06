@@ -21,9 +21,9 @@ namespace Elephanet
 
     public class JsonbQueryProvider : IJsonbQueryProvider
     {
-        private readonly NpgsqlConnection _conn;
-        private readonly IJsonConverter _jsonConverter;
-        private QueryTranslator _translator;
+        readonly NpgsqlConnection _conn;
+        readonly IJsonConverter _jsonConverter;
+        QueryTranslator _translator;
 
         public JsonbQueryProvider(NpgsqlConnection connection, IJsonConverter jsonConverter, ITableInfo tableInfo)
         {

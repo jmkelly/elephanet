@@ -15,7 +15,7 @@ namespace Elephanet.Benchmark
             const int records = 10000;
             var watch = new Stopwatch();
             Console.WriteLine("Creating {0} records", records);
-            DocumentStore store = new DocumentStore("Server=127.0.0.1;Port=5432;User id=store_user;password=my super secret password;database=store;");
+            var store = new DocumentStore("Server=127.0.0.1;Port=5432;User id=store_user;password=my super secret password;database=store;");
             var cars = GenerateCars(records);
             Console.WriteLine("Generated {0} records", records);
             Console.WriteLine("Saving {0} records to database", records);

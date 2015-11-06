@@ -48,14 +48,11 @@ namespace Elephanet
                 {
                     return node;
                 }
-                else if (_candidates.Contains(node))
+                if (_candidates.Contains(node))
                 {
                     return TryEvaluateCandidate(node);
                 }
-                else
-                {
-                    return base.Visit(node);
-                }
+                return base.Visit(node);
             }
 
             private static Expression TryEvaluateCandidate(Expression node)

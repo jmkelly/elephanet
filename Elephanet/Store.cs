@@ -8,7 +8,7 @@ namespace Elephanet
 {
     public class DocumentStore : IDocumentStore
     {
-        private string _connectionString;
+        readonly string _connectionString;
         readonly IStoreConventions _conventions;
         readonly IStoreInfo _storeInfo;
         readonly List<string> _tableNames;
@@ -17,7 +17,7 @@ namespace Elephanet
         {
             _connectionString = connectionString;
             _conventions = new StoreConventions();
-            _storeInfo = new StoreInfo();;
+            _storeInfo = new StoreInfo();
             _tableNames = new List<string>();
         }
 

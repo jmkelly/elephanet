@@ -14,11 +14,11 @@ namespace Elephanet.Tests
         {
             _store = data.TestStore;
         }
-
+        
         [Fact]
         public void SingleQuotes_ShouldBe_EscapedWhenSaving()
         {
-            _entity = new EntityForCorrectEscapingTests() {Id = Guid.NewGuid(), PropertyOne = "Kia", PropertyTwo = "Cee'd"};
+            _entity = new EntityForCorrectEscapingTests {Id = Guid.NewGuid(), PropertyOne = "Kia", PropertyTwo = "Cee'd"};
 
 
             //save the car

@@ -1,24 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Elephanet
 {
 
-        
-     public class QueryTranslator : ExpressionVisitor
+
+    public class QueryTranslator : ExpressionVisitor
     {
         const string columnName = "body";
-        private StringBuilder _sb;
-        private ITableInfo _tableInfo;
+        readonly StringBuilder _sb;
+        readonly ITableInfo _tableInfo;
 
-        private Expression _where;
-        private StringBuilder _limit;
-        private StringBuilder _offset;
-        private StringBuilder _orderBy;
+        readonly StringBuilder _limit;
+        readonly StringBuilder _offset;
+        readonly StringBuilder _orderBy;
 
         public QueryTranslator(ITableInfo tableInfo)
         {
@@ -42,7 +39,7 @@ namespace Elephanet
             return _sb.ToString();
         }
 
-        private static Expression StripQuotes(Expression e)
+        static Expression StripQuotes(Expression e)
         {
             while (e.NodeType == ExpressionType.Quote)
             {
@@ -58,54 +55,53 @@ namespace Elephanet
                 switch (node.Method.Name)
                 {
                     case "Where":
-                    {
-                        Type elementType = TypeSystem.GetElementType(node.Type);
-                        _sb.Append(string.Format("select {0} from {1} where {0} ", columnName, _tableInfo.TableNameWithSchema(elementType)));
-                        //Visit(node.Arguments[0]);
-                        LambdaExpression lambda = (LambdaExpression)StripQuotes(node.Arguments[1]);
-                        Visit(lambda.Body);
-                        return node;
-                    }
+                        {
+                            Type elementType = TypeSystem.GetElementType(node.Type);
+                            _sb.Append(string.Format("select {0} from {1} where {0} ", columnName, _tableInfo.TableNameWithSchema(elementType)));
+                            var lambda = (LambdaExpression)StripQuotes(node.Arguments[1]);
+                            Visit(lambda.Body);
+                            return node;
+                        }
                     case "Take":
-                    {
-                        _limit.Append(" limit ");
-                        VisitLimit((ConstantExpression)node.Arguments[1]);
-                        VisitMethodCall((MethodCallExpression)node.Arguments[0]);
-                        return node;
-                    }
+                        {
+                            _limit.Append(" limit ");
+                            VisitLimit((ConstantExpression)node.Arguments[1]);
+                            VisitMethodCall((MethodCallExpression)node.Arguments[0]);
+                            return node;
+                        }
                     case "Skip":
-                    {
-                        _offset.Append(" offset ");
-                        VisitOffset((ConstantExpression)node.Arguments[1]);
-                        VisitMethodCall((MethodCallExpression)node.Arguments[0]);
-                        return node;
+                        {
+                            _offset.Append(" offset ");
+                            VisitOffset((ConstantExpression)node.Arguments[1]);
+                            VisitMethodCall((MethodCallExpression)node.Arguments[0]);
+                            return node;
 
-                    }
+                        }
                     case "OrderBy":
-                    {
-                        Type elementType = TypeSystem.GetElementType(node.Type);
-                        LambdaExpression lambda = (LambdaExpression)StripQuotes(node.Arguments[1]);
-                        VisitOrderBy((MemberExpression)lambda.Body);
-                        VisitMethodCall((MethodCallExpression)node.Arguments[0]);
-                        return node;
-                    }
+                        {
+                            Type elementType = TypeSystem.GetElementType(node.Type);
+                            var lambda = (LambdaExpression)StripQuotes(node.Arguments[1]);
+                            VisitOrderBy((MemberExpression)lambda.Body);
+                            VisitMethodCall((MethodCallExpression)node.Arguments[0]);
+                            return node;
+                        }
                     case "OrderByDescending":
                         {
                             Type elementType = TypeSystem.GetElementType(node.Type);
-                            LambdaExpression lambda = (LambdaExpression)StripQuotes(node.Arguments[1]);
+                            var lambda = (LambdaExpression)StripQuotes(node.Arguments[1]);
                             VisitOrderByDesc((MemberExpression)lambda.Body);
                             VisitMethodCall((MethodCallExpression)node.Arguments[0]);
                             return node;
 
                         }
-                       
+
 
                 }
             }
             throw new NotSupportedException(string.Format("The method '{0}' is not supported", node.Method.Name));
-         }
+        }
 
-        private Expression VisitOrderByDesc(MemberExpression node)
+        Expression VisitOrderByDesc(MemberExpression node)
         {
             if (node.Expression != null && node.Expression.NodeType == ExpressionType.Parameter)
             {
@@ -118,7 +114,8 @@ namespace Elephanet
 
         protected override Expression VisitBinary(BinaryExpression node)
         {
-            switch (node.NodeType) {
+            switch (node.NodeType)
+            {
                 case ExpressionType.Equal:
                     _sb.Append("@>");
                     break;
@@ -137,25 +134,25 @@ namespace Elephanet
 
         protected override Expression VisitConstant(ConstantExpression node)
         {
-            _sb.Append(string.Format("\"{0}\"",node.Value));
+            _sb.Append(string.Format("\"{0}\"", node.Value));
             return node;
         }
 
-         private Expression VisitLimit(ConstantExpression node)
+        Expression VisitLimit(ConstantExpression node)
         {
-            _limit.Append(string.Format("{0}",node.Value));
+            _limit.Append(string.Format("{0}", node.Value));
             return node;
         }
 
 
-         private Expression VisitOffset(ConstantExpression node)
-         {
-             _offset.Append(string.Format("{0}", node.Value));
-             return node;
-         }
+        Expression VisitOffset(ConstantExpression node)
+        {
+            _offset.Append(string.Format("{0}", node.Value));
+            return node;
+        }
 
-         private Expression VisitOrderBy(MemberExpression node)
-         {
+        Expression VisitOrderBy(MemberExpression node)
+        {
             if (node.Expression != null && node.Expression.NodeType == ExpressionType.Parameter)
             {
                 _orderBy.Append(string.Format(" order by body->>'{0}'", node.Member.Name));
@@ -164,7 +161,7 @@ namespace Elephanet
 
             throw new NotSupportedException(string.Format("The member '{0}' is not supported", node.Member.Name));
 
-         }
+        }
 
         protected override Expression VisitMember(MemberExpression node)
         {
@@ -173,8 +170,6 @@ namespace Elephanet
                 _sb.Append(string.Format("\"{0}\"", node.Member.Name));
                 return node;
             }
-
-          
 
             throw new NotSupportedException(string.Format("The member '{0}' is not supported", node.Member.Name));
         }

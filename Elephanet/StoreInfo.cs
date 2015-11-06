@@ -5,7 +5,7 @@ namespace Elephanet
 {
     public class StoreInfo : IStoreInfo
     {
-        private string _name;
+        readonly string _name;
         readonly ConcurrentHashSet<string> _tableNames;
         public StoreInfo()
         {

@@ -12,7 +12,7 @@ namespace Elephanet.Tests
         [Fact]
         public void StoreInfo_GivenANewTable_Should_AddItToItsTableNamesList()
         {
-            StoreInfo storeInfo = new StoreInfo();
+            var storeInfo = new StoreInfo();
             storeInfo.Add("someting or rather");
 
             storeInfo.Tables.ShouldContain("someting or rather");

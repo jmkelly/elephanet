@@ -29,12 +29,12 @@ namespace Elephanet
 {
     public class DocumentSession : IDocumentSession
     {
-        private readonly IDocumentStore _documentStore;
-        private NpgsqlConnection _conn;
+        readonly IDocumentStore _documentStore;
+        readonly NpgsqlConnection _conn;
         protected readonly Dictionary<Guid, object> _entities = new Dictionary<Guid, object>();
         readonly IJsonConverter _jsonConverter;
-        private JsonbQueryProvider _queryProvider;
-        private ITableInfo _tableInfo;
+        readonly JsonbQueryProvider _queryProvider;
+        readonly ITableInfo _tableInfo;
 
 
         public DocumentSession(IDocumentStore documentStore)
@@ -96,7 +96,7 @@ namespace Elephanet
 
         public IJsonbQueryable<T> Query<T>()
         {
-            IJsonbQueryable<T> query = new JsonbQueryable<T>(new JsonbQueryProvider(_conn, _jsonConverter, _tableInfo));
+            var query = new JsonbQueryable<T>(new JsonbQueryProvider(_conn, _jsonConverter, _tableInfo));
             return query;
         }
 
@@ -108,7 +108,7 @@ namespace Elephanet
 
         HashSet<Tuple<Type, string, string>> MatchEntityToFinalTableAndTemporaryTable(Dictionary<Guid, object> entities)
         {
-            HashSet<Tuple<Type, string, string>> typeToTableMap = new HashSet<Tuple<Type, string, string>>();
+            var typeToTableMap = new HashSet<Tuple<Type, string, string>>();
 
             var types = entities.Values.Select(v => v.GetType()).Distinct();
             foreach (Type type in types)
@@ -121,7 +121,7 @@ namespace Elephanet
 
         void SaveInternal()
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             HashSet<Tuple<Type, string, string>> matches = MatchEntityToFinalTableAndTemporaryTable(_entities);
 
@@ -246,7 +246,7 @@ namespace Elephanet
             throw new NotImplementedException();
         }
 
-        public T GetById<T>(Guid id)
+        T IDocumentSession.GetById<T>(Guid id)
         {
             GetOrCreateTable(typeof(T));
             //hit the db first, so we get most up-to-date
@@ -262,7 +262,7 @@ namespace Elephanet
                     return default(T);
                 }
 
-                throw new EntityNotFoundException(id, typeof (T));
+                throw new EntityNotFoundException(id, typeof(T));
             }
             return entity;
         }
@@ -277,7 +277,7 @@ namespace Elephanet
                 command.CommandText = String.Format(@"SELECT body FROM {0} WHERE id in ({1});", _tableInfo.TableNameWithSchema(typeof(T)), JoinAndCommaSeperateAndSurroundWithSingleQuotes(ids));
                 Console.WriteLine(command.CommandText);
 
-                List<T> entities = new List<T>();
+                var entities = new List<T>();
 
                 using (var reader = command.ExecuteReader())
                 {
@@ -305,7 +305,7 @@ namespace Elephanet
                 command.CommandText = String.Format(@"SELECT body FROM {0};", _tableInfo.TableNameWithSchema(typeof(T)));
                 Console.WriteLine(command.CommandText);
 
-                List<T> entities = new List<T>();
+                var entities = new List<T>();
 
                 using (var reader = command.ExecuteReader())
                 {
@@ -319,6 +319,6 @@ namespace Elephanet
             }
         }
 
-
+       
     }
 }

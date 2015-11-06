@@ -7,8 +7,8 @@ namespace Elephanet.Expressions
 {
     public class SelectExpression : Expression
     {
-        private Expression _from;
-        private Expression _where;
+        readonly Expression _from;
+        readonly Expression _where;
         public SelectExpression(Type type, Expression from, Expression where)
         {
             _from = from;
