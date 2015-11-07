@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Elephanet.Extensions;
+using System;
 
 namespace Elephanet
 {
