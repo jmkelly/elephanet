@@ -7,6 +7,9 @@ using Elephanet.Serialization;
 using System.Text;
 using Elephanet.Conventions;
 using Elephanet.Helpers;
+using Elephanet.Linq;
+using Elephanet.Extensions;
+using System.Collections;
 
 
 /*
@@ -100,6 +103,43 @@ namespace Elephanet
             return query;
         }
 
+        public IEnumerable<T> Query<T>(string sql, params object[] parameters)
+        {
+
+            if (!sql.Contains("select"))
+            {
+                string tableName = _tableInfo.TableNameWithSchema(typeof(T));
+                sql = string.Format("select data from {0}", tableName);
+            }
+
+
+            var command = new NpgsqlCommand();
+            foreach (var parameter in parameters)
+            {
+                
+                var param = command.AddParameter(parameter);
+                sql = sql.UseParameter(param);
+            }
+
+
+            command.CommandText = sql;
+
+            Type elementType = TypeSystem.GetElementType(typeof(T));
+            Type listType = typeof(IList<>).MakeGenericType(elementType);
+            IList<T> list = (IList<T>)Activator.CreateInstance(listType);
+
+            using (var reader = command.ExecuteReader())
+            {
+                foreach (var item in reader)
+                {
+                    object entity = _jsonConverter.Deserialize(reader.GetString(0), elementType);
+                    list.Add((T)entity);
+                }
+            }
+
+            return list;
+        }
+
         public void SaveChanges()
         {
             //save the cache out to the db
@@ -132,22 +172,27 @@ namespace Elephanet
                 GetOrCreateTable(item.Value.GetType());
             }
 
+            StringBuilder createTempTable = new StringBuilder();
+            StringBuilder dropTempTable = new StringBuilder();
+
             sb.Append("BEGIN;");
+            List<string> temporaryTableName = new List<string>();
             foreach (var match in matches)
             {
-                sb.Append(string.Format("CREATE TEMPORARY TABLE \"{0}\" (id uuid, body jsonb);", match.Item3));
+                createTempTable.Append(string.Format("CREATE TABLE {0} (id uuid, body jsonb);", match.Item3.SurroundWithDoubleQuotes()));
+                dropTempTable.Append(string.Format("DROP TABLE {0};", match.Item3.SurroundWithDoubleQuotes()));
             }
 
             foreach (var item in _entities)
             {
-                sb.Append(string.Format("INSERT INTO \"{0}\" (id, body) VALUES ('{1}', '{2}');", matches.Where(c => c.Item1 == item.Value.GetType()).Select(j => j.Item3).First(), item.Key, _jsonConverter.Serialize(item.Value).EscapeQuotes()));
+                sb.Append(string.Format("INSERT INTO {0} (id, body) VALUES ('{1}', '{2}');", matches.Where(c => c.Item1 == item.Value.GetType()).Select(j => j.Item3).First().SurroundWithDoubleQuotes(), item.Key, _jsonConverter.Serialize(item.Value).EscapeQuotes()));
             }
 
             foreach (var match in matches)
             {
                 sb.Append(string.Format("LOCK TABLE {0} IN EXCLUSIVE MODE;", match.Item2));
-                sb.Append(string.Format("UPDATE {0} SET body = tmp.body from \"{1}\" tmp where tmp.id = {0}.id;", match.Item2, match.Item3));
-                sb.Append(string.Format("INSERT INTO {0} SELECT tmp.id, tmp.body from \"{1}\" tmp LEFT OUTER JOIN {0} ON ({0}.id = tmp.id) where {0}.id IS NULL;", match.Item2, match.Item3));
+                sb.Append(string.Format("UPDATE {0} SET body = tmp.body from {1} tmp where tmp.id = {0}.id;", match.Item2, match.Item3.SurroundWithDoubleQuotes()));
+                sb.Append(string.Format("INSERT INTO {0} SELECT tmp.id, tmp.body from {1} tmp LEFT OUTER JOIN {0} ON ({0}.id = tmp.id) where {0}.id IS NULL;", match.Item2, match.Item3.SurroundWithDoubleQuotes()));
             }
 
 
@@ -157,7 +202,11 @@ namespace Elephanet
             {
                 command.CommandTimeout = 60;
                 command.CommandType = CommandType.Text;
+                command.CommandText = createTempTable.ToString();
+                command.ExecuteNonQuery();
                 command.CommandText = sb.ToString();
+                command.ExecuteNonQuery();
+                command.CommandText = dropTempTable.ToString();
                 command.ExecuteNonQuery();
             }
 

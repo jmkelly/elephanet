@@ -11,6 +11,7 @@ namespace Elephanet
         IEnumerable<T> GetByIds<T>(IEnumerable<Guid> ids);
         IEnumerable<T> GetAll<T>();
         IJsonbQueryable<T> Query<T>();
+        IEnumerable<T> Query<T>(string sql, params object[] parameters);
         void SaveChanges();
         void Store<T>(T entity);
         void DeleteAll<T>();
