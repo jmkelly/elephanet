@@ -4,6 +4,7 @@ using Npgsql;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Threading;
+using Elephanet.Extensions;
 
 namespace Elephanet
 {
