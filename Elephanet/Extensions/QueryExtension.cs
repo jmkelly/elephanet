@@ -1,30 +1,56 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using Elephanet.Expressions;
 using Npgsql;
+using NpgsqlTypes;
+using System.Data;
 
-namespace Elephanet
+namespace Elephanet.Extensions
 {
-
-    public static class StringExtension
-    {
-        public static string ReplaceDotWithUnderscore(this string text)
+    public static class CommandExtensions
         {
-            text = text.Replace(".", "_");
-            return text;
-        }
+            public static NpgsqlParameter AddParameter(this NpgsqlCommand command, object value)
+            {
+                var name = "arg" + command.Parameters.Count;
 
-        public static string SurroundWith(this string text, string ends)
-        {
-            return ends + text + ends;
-        }
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = name;
+                parameter.Value = value ?? DBNull.Value;
+                command.Parameters.Add(parameter);
 
-        public static string SurroundWithSingleQuote(this string text)
-        {
-            return SurroundWith(text, "'");
+                return parameter;
+            }
+
+            public static NpgsqlParameter AddParameter(this NpgsqlCommand command, string name, object value)
+            {
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = name;
+                parameter.Value = value ?? DBNull.Value;
+                command.Parameters.Add(parameter);
+
+                return parameter;
+            }
+
+            public static NpgsqlCommand WithParameter(this NpgsqlCommand command, string name, object value)
+            {
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = name;
+                parameter.Value = value ?? DBNull.Value;
+                command.Parameters.Add(parameter);
+
+                return command;
+            }
+
+            public static NpgsqlCommand AsSproc(this NpgsqlCommand command)
+            {
+                command.CommandType = CommandType.StoredProcedure;
+
+                return command;
+            }
+
+            public static NpgsqlCommand WithJsonParameter(this NpgsqlCommand command, string name, string json)
+            {
+                command.Parameters.Add("doc", NpgsqlDbType.Json).Value = json;
+
+                return command;
+            }
         }
-    }
 }
