@@ -33,11 +33,13 @@
     <Reference Include="Jil">
       <HintPath>..\packages\Jil.2.8.1\lib\net45\Jil.dll</HintPath>
     </Reference>
-    <Reference Include="Mono.Security">
-      <HintPath>..\packages\Npgsql.2.2.4.3\lib\net45\Mono.Security.dll</HintPath>
+    <Reference Include="Npgsql, Version=3.0.3.0, Culture=neutral, PublicKeyToken=5d8b90d52f46fda7, processorArchitecture=MSIL">
+      <HintPath>..\packages\Npgsql.3.0.3\lib\net45\Npgsql.dll</HintPath>
+      <Private>True</Private>
     </Reference>
-    <Reference Include="Npgsql">
-      <HintPath>..\packages\Npgsql.2.2.4.3\lib\net45\Npgsql.dll</HintPath>
+    <Reference Include="Remotion.Linq, Version=2.0.0.0, Culture=neutral, PublicKeyToken=fee00910d6e5f53b, processorArchitecture=MSIL">
+      <HintPath>..\packages\Remotion.Linq.2.0.1\lib\net45\Remotion.Linq.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Sigil">
       <HintPath>..\packages\Sigil.4.4.0\lib\net45\Sigil.dll</HintPath>
@@ -63,6 +65,7 @@
     <Compile Include="Expressions\JsonbExpressionType.cs" />
     <Compile Include="Expressions\SelectExpression.cs" />
     <Compile Include="Expressions\SqlExpression.cs" />
+    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="IdentityFactory.cs" />
     <Compile Include="IDocumentSession.cs" />
     <Compile Include="ITableInfo.cs" />
@@ -89,6 +92,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Linq\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
