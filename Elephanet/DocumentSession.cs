@@ -4,9 +4,7 @@ using Npgsql;
 using System.Linq;
 using System.Data;
 using Elephanet.Serialization;
-using System.Text;
 using Elephanet.Conventions;
-using Elephanet.Helpers;
 using Elephanet.Extensions;
 
 
@@ -36,8 +34,11 @@ namespace Elephanet
         readonly IJsonConverter _jsonConverter;
         readonly JsonbQueryProvider _queryProvider;
         readonly ITableInfo _tableInfo;
+        readonly ISchemaGenerator _schemaGenerator;
+      
 
 
+        //todo provide extra constructors for injecting these dependencies
         public DocumentSession(IDocumentStore documentStore)
         {
             _documentStore = documentStore;
@@ -46,11 +47,12 @@ namespace Elephanet
             _conn.Open();
             _jsonConverter = documentStore.Conventions.JsonConverter;
             _queryProvider = new JsonbQueryProvider(_conn, _jsonConverter, _tableInfo);
+            _schemaGenerator = new SchemaGenerator(documentStore, _conn);
         }
 
         public void Delete<T>(Guid id)
         {
-            GetOrCreateTable(typeof(T));
+            _schemaGenerator.GetOrCreateTable(typeof(T));
             using (var command = _conn.CreateCommand())
             {
                 command.CommandType = CommandType.Text;
@@ -62,7 +64,7 @@ namespace Elephanet
 
         public void DeleteAll<T>()
         {
-            GetOrCreateTable(typeof(T));
+            _schemaGenerator.GetOrCreateTable(typeof(T));
             using (var command = _conn.CreateCommand())
             {
                 command.CommandType = CommandType.Text;
@@ -75,7 +77,7 @@ namespace Elephanet
         public T LoadInternal<T>(Guid id)
         {
 
-            GetOrCreateTable(typeof(T));
+            _schemaGenerator.GetOrCreateTable(typeof(T));
             using (var command = _conn.CreateCommand())
             {
                 command.CommandType = CommandType.Text;
@@ -144,72 +146,16 @@ namespace Elephanet
             SaveInternal();
         }
 
-        HashSet<Tuple<Type, string, string>> MatchEntityToFinalTableAndTemporaryTable(Dictionary<Guid, object> entities)
-        {
-            var typeToTableMap = new HashSet<Tuple<Type, string, string>>();
-
-            var types = entities.Values.Select(v => v.GetType()).Distinct();
-            foreach (Type type in types)
-            {
-                typeToTableMap.Add(new Tuple<Type, string, string>(type, _tableInfo.TableNameWithSchema(type), Guid.NewGuid().ToString()));
-            }
-
-            return typeToTableMap;
-        }
+       
 
         void SaveInternal()
         {
-            var sb = new StringBuilder();
-
-            HashSet<Tuple<Type, string, string>> matches = MatchEntityToFinalTableAndTemporaryTable(_entities);
-
-
-            foreach (var item in _entities)
-            {
-                //make sure we have tables for all types
-                GetOrCreateTable(item.Value.GetType());
-            }
-
-            StringBuilder createTempTable = new StringBuilder();
-            StringBuilder dropTempTable = new StringBuilder();
-
-            sb.Append("BEGIN;");
-            List<string> temporaryTableName = new List<string>();
-            foreach (var match in matches)
-            {
-                createTempTable.Append(string.Format("CREATE TABLE {0} (id uuid, body jsonb);", match.Item3.SurroundWithDoubleQuotes()));
-                dropTempTable.Append(string.Format("DROP TABLE {0};", match.Item3.SurroundWithDoubleQuotes()));
-            }
-
-            foreach (var item in _entities)
-            {
-                sb.Append(string.Format("INSERT INTO {0} (id, body) VALUES ('{1}', '{2}');", matches.Where(c => c.Item1 == item.Value.GetType()).Select(j => j.Item3).First().SurroundWithDoubleQuotes(), item.Key, _jsonConverter.Serialize(item.Value).EscapeQuotes()));
-            }
-
-            foreach (var match in matches)
-            {
-                sb.Append(string.Format("LOCK TABLE {0} IN EXCLUSIVE MODE;", match.Item2));
-                sb.Append(string.Format("UPDATE {0} SET body = tmp.body from {1} tmp where tmp.id = {0}.id;", match.Item2, match.Item3.SurroundWithDoubleQuotes()));
-                sb.Append(string.Format("INSERT INTO {0} SELECT tmp.id, tmp.body from {1} tmp LEFT OUTER JOIN {0} ON ({0}.id = tmp.id) where {0}.id IS NULL;", match.Item2, match.Item3.SurroundWithDoubleQuotes()));
-            }
-
-
-            sb.Append("COMMIT;");
-
-            using (var command = _conn.CreateCommand())
-            {
-                command.CommandTimeout = 60;
-                command.CommandType = CommandType.Text;
-                command.CommandText = createTempTable.ToString();
-                command.ExecuteNonQuery();
-                command.CommandText = sb.ToString();
-                command.ExecuteNonQuery();
-                command.CommandText = dropTempTable.ToString();
-                command.ExecuteNonQuery();
-            }
+            var runner = new CommandRunner(_conn, _entities, _schemaGenerator, _tableInfo, _jsonConverter);
+            runner.Execute();
 
             _entities.Clear();
         }
+      
 
         public void Store<T>(T entity)
         {
@@ -217,70 +163,10 @@ namespace Elephanet
             _entities[id] = entity;
         }
 
-        private bool IndexDoesNotExist(Type type)
-        {
-            using (var command = _conn.CreateCommand())
-            {
-                command.CommandType = CommandType.Text;
-                command.CommandText = string.Format(@"select count(*)
-                from pg_indexes
-                where schemaname = '{0}'
-                and tablename = '{1}'
-                and indexname = 'idx_{1}_body';", _tableInfo.Schema, _tableInfo.TableNameWithoutSchema(type));
-                var indexCount = (Int64)command.ExecuteScalar();
-                return indexCount == 0;
-            }
-
-        }
-        private void CreateIndex(Type type)
-        {
-            if (IndexDoesNotExist(type))
-            {
-                using (var command = _conn.CreateCommand())
-                {
-                    command.CommandType = CommandType.Text;
-                    command.CommandText = string.Format(@"CREATE INDEX idx_{0}_body ON {0} USING gin (body);", _tableInfo.TableNameWithoutSchema(type));
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
+       
 
 
-        private void GetOrCreateTable(Type type)
-        {
-            if (!_documentStore.StoreInfo.Tables.Contains(_tableInfo.TableNameWithSchema(type)))
-            {
-                _documentStore.StoreInfo.Tables.Add(_tableInfo.TableNameWithSchema(type));
-                try
-                {
-                    using (var command = _conn.CreateCommand())
-                    {
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = String.Format(@"
-                            CREATE TABLE IF NOT EXISTS {0}
-                            (
-                                id uuid NOT NULL, 
-                                body jsonb NOT NULL, 
-                                created timestamp without time zone NOT NULL DEFAULT (now() at time zone 'utc'),
-                                CONSTRAINT pk_{1} PRIMARY KEY (id)
-                            );", _tableInfo.TableNameWithSchema(type), _tableInfo.TableNameWithoutSchema(type));
-                        command.ExecuteNonQuery();
-                    }
-                }
-                catch (Exception exception)
-                {
-                    throw new Exception(String.Format("Could not create table {0}; see the inner exception for more information.", _tableInfo.TableNameWithSchema(type)), exception);
-                }
-                try
-                {
-                    CreateIndex(type);
-                }
-                catch (Exception exception)
-                {
-                    throw new Exception(String.Format("Could not create index on table {0}; see the inner exception for more information.", _tableInfo.TableNameWithSchema(type)), exception);
-                }
-            }
-        }
+       
 
         public void Dispose()
         {
@@ -295,7 +181,7 @@ namespace Elephanet
 
         T IDocumentSession.GetById<T>(Guid id)
         {
-            GetOrCreateTable(typeof(T));
+            _schemaGenerator.GetOrCreateTable(typeof(T));
             //hit the db first, so we get most up-to-date
             var entity = LoadInternal<T>(id);
             //try the cache just incase hasn't been saved to db yet, but is in session
@@ -317,7 +203,7 @@ namespace Elephanet
         public IEnumerable<T> GetByIds<T>(IEnumerable<Guid> ids)
         {
 
-            GetOrCreateTable(typeof(T));
+            _schemaGenerator.GetOrCreateTable(typeof(T));
             using (var command = _conn.CreateCommand())
             {
                 command.CommandType = CommandType.Text;
@@ -345,7 +231,7 @@ namespace Elephanet
 
         public IEnumerable<T> GetAll<T>()
         {
-            GetOrCreateTable(typeof(T));
+            _schemaGenerator.GetOrCreateTable(typeof(T));
             using (var command = _conn.CreateCommand())
             {
                 command.CommandType = CommandType.Text;
