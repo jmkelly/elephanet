@@ -39,5 +39,10 @@ namespace Elephanet.Extensions
         {
             return SurroundWith(text, "\"");
         }
+
+        public static string EscapeQuotes(this string text)
+        {
+            return text.Replace("'", "''");
+        }
     }
 }
