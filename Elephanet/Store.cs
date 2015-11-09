@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Data;
-using System.Data.Common;
 using Npgsql;
 using System.Collections.Generic;
 
@@ -12,15 +11,19 @@ namespace Elephanet
         readonly IStoreConventions _conventions;
         readonly IStoreInfo _storeInfo;
         readonly List<string> _tableNames;
+        ITableInfo _tableInfo;
+        ISchemaGenerator _schemaGenerator;
 
         public DocumentStore(string connectionString)
         {
             _connectionString = connectionString;
             _conventions = new StoreConventions();
+            _tableInfo = _conventions.TableInfo;
             _storeInfo = new StoreInfo();
             _tableNames = new List<string>();
         }
 
+ 
         public DocumentStore(string connectionString, IStoreConventions conventions)
         {
             _connectionString = connectionString;
@@ -33,6 +36,14 @@ namespace Elephanet
             _connectionString = connectionString;
             _conventions = conventions;
             _storeInfo = storeInfo;
+        }
+
+        public DocumentStore(string connectionString, IStoreConventions conventions, IStoreInfo storeInfo, ISchemaGenerator schemaGenerator)
+        {
+            _connectionString = connectionString;
+            _conventions = conventions;
+            _storeInfo = storeInfo;
+            _schemaGenerator = schemaGenerator;
         }
 
         public DocumentStore(string connectionString, IStoreInfo storeInfo)
@@ -114,5 +125,7 @@ namespace Elephanet
                     connection.Dispose();
               }
         }
+
+       
     }
 }
