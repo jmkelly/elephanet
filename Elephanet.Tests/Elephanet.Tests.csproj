@@ -64,7 +64,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Entities\EntityForLinqAndTests.cs" />
     <Compile Include="Entities\EntityForWhereLinqTests.cs" />
     <Compile Include="Entities\EntityForLinqOrderByTests.cs" />
     <Compile Include="Entities\AnotherEntity.cs" />
@@ -82,7 +81,6 @@
     <Compile Include="GetAllTests.cs" />
     <Compile Include="GetByIdTests.cs" />
     <Compile Include="JsonConverterTests.cs" />
-    <Compile Include="LinqAndTests.cs" />
     <Compile Include="LinqOrderByTests.cs" />
     <Compile Include="LinqTests.cs" />
     <Compile Include="CorrectEscapingTests.cs" />
