@@ -42,14 +42,14 @@ namespace Elephanet
             _jsonConverter = jsonConverter;
         }
 
-        HashSet<Tuple<Type, string, string>> MatchEntityToFinalTableAndTemporaryTable(Dictionary<Guid, object> entities)
+        HashSet<EntityMap> MatchEntityToFinalTableAndTemporaryTable(Dictionary<Guid, object> entities)
         {
-            var typeToTableMap = new HashSet<Tuple<Type, string, string>>();
+            var typeToTableMap = new HashSet<EntityMap>();
 
             var types = entities.Values.Select(v => v.GetType()).Distinct();
             foreach (Type type in types)
             {
-                typeToTableMap.Add(new Tuple<Type, string, string>(type, _tableInfo.TableNameWithSchema(type), Guid.NewGuid().ToString()));
+                typeToTableMap.Add(new EntityMap(type, _tableInfo.TableNameWithSchema(type), Guid.NewGuid().ToString()));
             }
 
             return typeToTableMap;
@@ -60,7 +60,7 @@ namespace Elephanet
 
             var sb = new StringBuilder();
 
-            HashSet<Tuple<Type, string, string>> matches = MatchEntityToFinalTableAndTemporaryTable(_entities);
+            HashSet<EntityMap> matches = MatchEntityToFinalTableAndTemporaryTable(_entities);
 
 
             foreach (var item in _entities)
@@ -76,20 +76,20 @@ namespace Elephanet
             List<string> temporaryTableName = new List<string>();
             foreach (var match in matches)
             {
-                createTempTable.Append(string.Format("CREATE TABLE {0} (id uuid, body jsonb);", match.Item3.SurroundWithDoubleQuotes()));
-                dropTempTable.Append(string.Format("DROP TABLE {0};", match.Item3.SurroundWithDoubleQuotes()));
+                createTempTable.Append(string.Format("CREATE TABLE {0} (id uuid, body jsonb);", match.TemporaryTableName.SurroundWithDoubleQuotes()));
+                dropTempTable.Append(string.Format("DROP TABLE {0};", match.TemporaryTableName.SurroundWithDoubleQuotes()));
             }
 
             foreach (var item in _entities)
             {
-                sb.Append(string.Format("INSERT INTO {0} (id, body) VALUES ('{1}', '{2}');", matches.Where(c => c.Item1 == item.Value.GetType()).Select(j => j.Item3).First().SurroundWithDoubleQuotes(), item.Key, _jsonConverter.Serialize(item.Value).EscapeQuotes()));
+                sb.Append(string.Format("INSERT INTO {0} (id, body) VALUES ('{1}', '{2}');", matches.Where(c => c.EntityType == item.Value.GetType()).Select(j => j.TemporaryTableName).First().SurroundWithDoubleQuotes(), item.Key, _jsonConverter.Serialize(item.Value).EscapeQuotes()));
             }
 
             foreach (var match in matches)
             {
-                sb.Append(string.Format("LOCK TABLE {0} IN EXCLUSIVE MODE;", match.Item2));
-                sb.Append(string.Format("UPDATE {0} SET body = tmp.body from {1} tmp where tmp.id = {0}.id;", match.Item2, match.Item3.SurroundWithDoubleQuotes()));
-                sb.Append(string.Format("INSERT INTO {0} SELECT tmp.id, tmp.body from {1} tmp LEFT OUTER JOIN {0} ON ({0}.id = tmp.id) where {0}.id IS NULL;", match.Item2, match.Item3.SurroundWithDoubleQuotes()));
+                sb.Append(string.Format("LOCK TABLE {0} IN EXCLUSIVE MODE;", match.TableName));
+                sb.Append(string.Format("UPDATE {0} SET body = tmp.body from {1} tmp where tmp.id = {0}.id;", match.TableName, match.TemporaryTableName.SurroundWithDoubleQuotes()));
+                sb.Append(string.Format("INSERT INTO {0} SELECT tmp.id, tmp.body from {1} tmp LEFT OUTER JOIN {0} ON ({0}.id = tmp.id) where {0}.id IS NULL;", match.TableName, match.TemporaryTableName.SurroundWithDoubleQuotes()));
             }
 
 
@@ -107,5 +107,20 @@ namespace Elephanet
                 command.ExecuteNonQuery();
             }
         }
+    }
+
+    public class EntityMap
+    {
+
+        public EntityMap(Type type, string tableName, string temporaryTableName)
+        {
+            EntityType = type;
+            TableName = tableName;
+            TemporaryTableName = temporaryTableName;
+        }
+
+        public Type EntityType { get; set; }
+        public string TableName { get; set; }
+        public string TemporaryTableName { get; set; }
     }
 }
