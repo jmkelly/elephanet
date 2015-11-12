@@ -12,7 +12,7 @@ namespace Elephanet.Benchmark
     {
         static void Main(string[] args)
         {
-            const int records = 10000;
+            const int records = 20000;
             var watch = new Stopwatch();
             Console.WriteLine("Creating {0} records", records);
             var store = new DocumentStore("Server=127.0.0.1;Port=5432;User id=store_user;password=my super secret password;database=store;");
