@@ -1,6 +1,8 @@
 ﻿using Npgsql;
 using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace Elephanet
 {
@@ -34,6 +36,19 @@ namespace Elephanet
                 return indexCount == 0;
             }
 
+        }
+
+        public HashSet<EntityMap> MatchEntityToFinalTableAndTemporaryTable(Dictionary<Guid, object> entities)
+        {
+            var typeToTableMap = new HashSet<EntityMap>();
+
+            var types = entities.Values.Select(v => v.GetType()).Distinct();
+            foreach (Type type in types)
+            {
+                typeToTableMap.Add(new EntityMap(type, _tableInfo.TableNameWithSchema(type), Guid.NewGuid().ToString()));
+            }
+
+            return typeToTableMap;
         }
 
         void CreateIndex(Type type)
