@@ -64,6 +64,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BatchCommanderTests.cs" />
+    <Compile Include="Entities\EntityForBatchingTests.cs" />
     <Compile Include="Entities\EntityForWhereLinqTests.cs" />
     <Compile Include="Entities\EntityForLinqOrderByTests.cs" />
     <Compile Include="Entities\AnotherEntity.cs" />
